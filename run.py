@@ -9,24 +9,8 @@ import sys
 # Make sure project root is on path
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-try:
-    from app import create_app, db
-    from app.models import User, Project, Department, GeneratedData
-except ModuleNotFoundError as e:
-    print('=' * 60)
-    print(' Missing Python package:', e)
-    print(' Interpreter in use:', sys.executable)
-    print()
-    print(' FIX (PyCharm):')
-    print('   1. Right-click setup_pycharm.py → Run')
-    print('   2. Then right-click run.py → Run')
-    print('   (Both must use the same interpreter / .venv)')
-    print()
-    print(' FIX (Terminal):')
-    print('   python -m pip install -r requirements.txt')
-    print('   OR double-click install_deps.bat')
-    print('=' * 60)
-    raise SystemExit(1) from e
+from app import create_app, db
+from app.models import User, Project, Department, GeneratedData
 
 app = create_app(os.environ.get('FLASK_ENV', 'development'))
 
@@ -61,7 +45,10 @@ if __name__ == '__main__':
     ║   NETRIX Enterprise Network Planning         ║
     ║   http://127.0.0.1:{port:<5}                       ║
     ╠══════════════════════════════════════════════╣
-    ║   Register: /register   Login: /login        ║
+    ║   Demo accounts:                             ║
+    ║    admin@netrix.local  / Admin@12345         ║
+    ║    engineer@netrix.local / Engineer@123      ║
+    ║    viewer@netrix.local / Viewer@123          ║
     ╠══════════════════════════════════════════════╣
     ║   DB: {display_uri[:40]:<40} ║
     ╚══════════════════════════════════════════════╝

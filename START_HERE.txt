@@ -1,21 +1,45 @@
-NETRIX — START HERE (Windows)
-=============================
+╔══════════════════════════════════════════════════════════╗
+║           NETRIX — HOW TO RUN (IMPORTANT)                ║
+╚══════════════════════════════════════════════════════════╝
 
-1) Install packages (once):
-     Double-click:  install_deps.bat
-   OR in PyCharm: right-click setup_pycharm.py → Run
+  DO NOT open the .html files by double-clicking them.
+  That causes "File not found" and broken {{ url_for }} links.
 
-2) Start the server:
-     Double-click:  start.bat
-   OR:  python run.py
-   OR in PyCharm: right-click run.py → Run
+  The app needs the Python server running.
 
-3) Open browser:  http://127.0.0.1:5000
+────────────────────────────────────────────────────────────
+  WINDOWS
+────────────────────────────────────────────────────────────
+  1. Double-click   start.bat
+  2. Wait until you see "Running on http://127.0.0.1:5000"
+  3. Open Chrome/Firefox at:   http://127.0.0.1:5000
 
-4) Accounts
-   - Public users: Register at /register, then Login at /login
-   - Admin access is not shown on the login page.
-     Configure the admin account privately via environment variables
-     in .env (see .env.example): BOOTSTRAP_ADMIN_EMAIL / BOOTSTRAP_ADMIN_PASSWORD
+────────────────────────────────────────────────────────────
+  MAC / LINUX
+────────────────────────────────────────────────────────────
+  1. Open Terminal in this folder
+  2. Run:   chmod +x start.sh && ./start.sh
+  3. Open:  http://127.0.0.1:5000
 
-5) Deploy online: see DEPLOYMENT.md
+────────────────────────────────────────────────────────────
+  MANUAL
+────────────────────────────────────────────────────────────
+  python -m venv venv
+  venv\Scripts\activate          (Windows)
+  source venv/bin/activate       (Mac/Linux)
+  pip install -r requirements.txt
+  python run.py
+
+────────────────────────────────────────────────────────────
+  DEMO LOGINS
+────────────────────────────────────────────────────────────
+  Admin:     admin@netrix.local      / Admin@12345
+  Engineer:  engineer@netrix.local   / Engineer@123
+  Viewer:    viewer@netrix.local     / Viewer@123
+
+────────────────────────────────────────────────────────────
+  TROUBLESHOOT
+────────────────────────────────────────────────────────────
+  • python check_db.py          — test database
+  • Delete instance\netrix.db and restart if DB errors
+  • Make sure port 5000 is free

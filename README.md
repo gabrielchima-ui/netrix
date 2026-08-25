@@ -1,39 +1,77 @@
-# NETRIX — Enterprise Network Planning Framework
+# NETRIX – Enterprise Network Planning Framework
 
-Web application for VLSM/IPv4/IPv6 planning, VLAN design, Cisco config generation,
-topology/UML diagrams, PDF/Word/Excel reports, Packet Tracer lab guides, and live SSH push.
+Production-ready web application for enterprise network design with **role-based access control (RBAC)**.
 
-## Features
+## Roles
 
-- Secure **registration** and **login** (no demo accounts)
-- Project management with multi-router / multi-switch / WAN design
-- Automated VLSM, VLAN, IPv4 & IPv6 ULA planning
-- Cisco IOS router/switch configuration generation
-- Professional PDF reports (executive summary, metrics, diagrams)
-- **Download** reports or **email PDF** to yourself or a client
-- Role-based access control
-- REST API endpoints
+| Role | Label | Capabilities |
+|------|--------|--------------|
+| **admin** | Administrator | Full access, manage all projects, user management |
+| **user** | Network Engineer | Create & manage own projects, generate configs, downloads |
+| **viewer** | Viewer | Read-only access to own projects |
 
-## Quick start (local)
+## Demo accounts
+
+| Role | Email | Password |
+|------|--------|----------|
+| admin | `admin@netrix.local` | `Admin@12345` |
+| user | `engineer@netrix.local` | `Engineer@123` |
+| viewer | `viewer@netrix.local` | `Viewer@123` |
+
+Self-registration creates a standard **user** account.
+
+## Quick start
 
 ```bash
-python -m venv venv
-source venv/bin/activate   # Windows: venv\Scripts\activate
+python3 -m venv venv
+source venv/bin/activate          # Windows: venv\Scripts\activate
 pip install -r requirements.txt
 python run.py
 ```
 
-Open http://127.0.0.1:5000 → **Register** a new account → **Login**.
+Open **http://127.0.0.1:5000** and sign in with a demo account.
 
-## Production (GitHub + Vercel + custom domain)
+## Features
 
-See **[DEPLOY_ONLINE.md](DEPLOY_ONLINE.md)** (quick online) and **[DEPLOYMENT.md](DEPLOYMENT.md)** for:
+- Secure authentication (Flask-Login, hashed passwords)
+- Role-based access control with permission catalogue
+- Project management (VLSM, IPv4, VLAN, Cisco configs)
+- Topology & UML diagrams
+- PDF / Word / Excel / CSV exports
+- Admin user management panel
+- REST API under `/api`, `/projects`, `/admin`
 
-- Pushing to GitHub
-- Postgres on Neon/Supabase/Vercel
-- Vercel env vars (including SMTP for email reports)
-- Pointing a Namecheap domain at Vercel
+## API (authenticated)
 
-## Environment
+| Method | Endpoint | Permission |
+|--------|----------|------------|
+| GET/POST | `/projects/` | project.list / project.create |
+| GET/PUT/DELETE | `/projects/<id>` | project.view / edit / delete |
+| POST | `/projects/<id>/generate` | project.generate |
+| GET | `/projects/<id>/download/<type>` | project.download |
+| GET | `/admin/users` | admin only |
+| POST/PUT/DELETE | `/admin/users[/<id>]` | admin only |
+| GET | `/api/users/me` | authenticated |
+| GET | `/api/permissions` | authenticated |
+| GET | `/api/stats` | stats.view |
 
-Copy `.env.example` to `.env` and set `SECRET_KEY`, `DATABASE_URL`, and `MAIL_*` as needed.
+## Project structure
+
+```
+netrix/
+├── app/
+│   ├── models/          # User, Project, Department, GeneratedData
+│   ├── routes/          # auth, main, projects, api, admin
+│   ├── services/        # network_engine, reports
+│   ├── utils/rbac.py    # roles, permissions, decorators
+│   └── templates/
+├── config.py
+├── run.py
+└── requirements.txt
+```
+
+## Production notes
+
+- Set strong `SECRET_KEY` in `.env`
+- Use `gunicorn -w 4 -b 0.0.0.0:8000 "run:app"`
+- Optional MySQL: `DATABASE_URL=mysql+pymysql://user:pass@host/netrix`

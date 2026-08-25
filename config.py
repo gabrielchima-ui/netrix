@@ -1,5 +1,5 @@
 """
-NETRIX configuration — SQLite (local) / Postgres (production / Vercel).
+NETRIX configuration — robust SQLite (and optional MySQL) database setup.
 """
 import os
 import sys
@@ -14,6 +14,7 @@ _instance = basedir / 'instance'
 
 
 def _ensure_dir(path: Path) -> bool:
+    """Create directory and verify it is writable. Returns True on success."""
     try:
         path.mkdir(parents=True, exist_ok=True)
         probe = path / '.write_test'
@@ -26,32 +27,38 @@ def _ensure_dir(path: Path) -> bool:
 
 
 def _sqlite_uri(db_path: Path) -> str:
+    """
+    Build a correct absolute SQLite URI for any OS.
+    SQLAlchemy expects: sqlite:///C:/path/to.db  (Windows)
+                        sqlite:////absolute/path  (Unix – 4 slashes)
+    Using Path.as_uri() is the most reliable approach.
+    """
+    # as_uri() -> file:///C:/... or file:///home/...
+    # SQLAlchemy wants sqlite: + absolute path with forward slashes
     absolute = db_path.resolve()
+    # Three slashes after sqlite: plus absolute path starting with /
+    # On Windows absolute is like C:\foo → need sqlite:///C:/foo
     posix = absolute.as_posix()
     if absolute.drive:
+        # Windows: sqlite:///C:/Users/...
         return f'sqlite:///{posix}'
+    # Unix: sqlite:////home/...  (four slashes total)
     return f'sqlite:///{posix}'
-
-
-def _normalize_database_url(url: str) -> str:
-    """Vercel/Heroku style postgres:// → SQLAlchemy postgresql://"""
-    if url.startswith('postgres://'):
-        url = 'postgresql://' + url[len('postgres://'):]
-    return url
 
 
 def resolve_database_uri():
     """
     Priority:
-      1. DATABASE_URL (Postgres recommended on Vercel; also MySQL/SQLite)
-      2. instance/netrix.db (local writable)
+      1. DATABASE_URL environment variable (MySQL, Postgres, or absolute SQLite)
+      2. instance/netrix.db next to the app (if writable)
       3. System temp directory fallback
     """
     env_url = (os.environ.get('DATABASE_URL') or '').strip()
     if env_url:
-        env_url = _normalize_database_url(env_url)
+        # Fix common relative SQLite mistake: sqlite:///instance/netrix.db
         if env_url.startswith('sqlite:///') and not env_url.startswith('sqlite:////'):
             rest = env_url[len('sqlite:///'):]
+            # Relative path → make absolute under basedir
             if not rest.startswith('/') and not (len(rest) > 1 and rest[1] == ':'):
                 abs_path = (basedir / rest).resolve()
                 fixed = _sqlite_uri(abs_path)
@@ -59,9 +66,12 @@ def resolve_database_uri():
                 return fixed
         return env_url
 
+    # Prefer instance/ next to the application
     if _ensure_dir(_instance):
-        return _sqlite_uri(_instance / 'netrix.db')
+        db_path = _instance / 'netrix.db'
+        return _sqlite_uri(db_path)
 
+    # Fallback: OS temp dir
     tmp_dir = Path(tempfile.gettempdir())
     _ensure_dir(tmp_dir)
     db_path = tmp_dir / 'netrix.db'
@@ -70,11 +80,12 @@ def resolve_database_uri():
 
 
 def sqlite_connect_args(uri: str) -> dict:
+    """Extra connect args only for SQLite."""
     if not uri.startswith('sqlite'):
         return {}
     return {
         'timeout': 30,
-        'check_same_thread': False,
+        'check_same_thread': False,  # required for Flask threaded/dev server
     }
 
 
@@ -95,15 +106,6 @@ class Config:
     SESSION_COOKIE_SAMESITE = 'Lax'
     REMEMBER_COOKIE_HTTPONLY = True
 
-    # SMTP / report email
-    MAIL_SERVER = os.environ.get('MAIL_SERVER', '')
-    MAIL_PORT = int(os.environ.get('MAIL_PORT', 587))
-    MAIL_USE_TLS = os.environ.get('MAIL_USE_TLS', 'true').lower() in ('1', 'true', 'yes')
-    MAIL_USE_SSL = os.environ.get('MAIL_USE_SSL', 'false').lower() in ('1', 'true', 'yes')
-    MAIL_USERNAME = os.environ.get('MAIL_USERNAME', '')
-    MAIL_PASSWORD = os.environ.get('MAIL_PASSWORD', '')
-    MAIL_DEFAULT_SENDER = os.environ.get('MAIL_DEFAULT_SENDER') or os.environ.get('MAIL_USERNAME', '')
-
 
 class DevelopmentConfig(Config):
     DEBUG = True
@@ -112,10 +114,6 @@ class DevelopmentConfig(Config):
 class ProductionConfig(Config):
     DEBUG = False
     SESSION_COOKIE_SECURE = True
-    REMEMBER_COOKIE_SECURE = True
-    PREFERRED_URL_SCHEME = 'https'
-    # Prefer SECRET_KEY from env in production
-    SECRET_KEY = os.environ.get('SECRET_KEY') or Config.SECRET_KEY
 
 
 config = {
